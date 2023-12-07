@@ -26,10 +26,9 @@ local function open_and_or_send(command)
   if runner_is_open == true then
     send_kitty_command(config["run_cmd"], command)
   else
-    M.open_runner()
-    -- TODO: fix this hack
-    os.execute("sleep .3")
-    send_kitty_command(config["run_cmd"], command)
+    M.open_runner(function()
+      send_kitty_command(config["run_cmd"], command)
+    end)
   end
 end
 
@@ -49,30 +48,31 @@ local function prepare_command(region)
   return "\\e[200~" .. command .. "\\e[201~" .. "\r"
 end
 
-function M.open_runner()
+function M.open_runner(callback)
   if runner_is_open == false then
-    if config["mode"] == "os-window" then
-      loop.spawn("kitty", {
-        args = {
-          "-o",
-          "allow_remote_control=yes",
-          "--listen-on=" .. config["kitty_port"],
-          "--title=" .. config["runner_name"],
-        },
-      })
-      runner_is_open = true
-    elseif config["mode"] == "window" then
-      loop.spawn("kitty", {
+    local on_exit = loop.spawn(
+      "kitty",
+      {
         args = {
           "@",
           "launch",
           "--title=" .. config["runner_name"],
           "--keep-focus",
           "--cwd=" .. vim.fn.getcwd()
-        },
-      })
-      runner_is_open = true
-    end
+        }
+      },
+      function(code, _)
+        if code then
+          runner_is_open = false
+          error("Failed: check if allow_remote_control is enabled")
+        else
+          runner_is_open = true
+          if callback then callback() end
+        end
+      end
+    )
+
+    vim.fn.printf(vim.inspect(on_exit))
   end
 end
 
