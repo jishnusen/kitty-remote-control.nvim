@@ -58,11 +58,12 @@ function M.open_runner(callback)
           "launch",
           "--title=" .. config["runner_name"],
           "--keep-focus",
-          "--cwd=" .. vim.fn.getcwd()
-        }
+          "--cwd=" .. vim.fn.getcwd(),
+          "--type=" .. config["type"],
+        },
       },
       function(code, _)
-        if code then
+        if code > 0 then
           runner_is_open = false
           error("Failed: check if allow_remote_control is enabled")
         else
@@ -76,25 +77,29 @@ function M.open_runner(callback)
   end
 end
 
-function M.run_command(region)
+function M.run_region(region)
   whole_command = prepare_command(region)
   -- delete visual selection marks
   vim.cmd([[delm <>]])
   open_and_or_send(whole_command)
 end
 
-function M.re_run_command()
-  if whole_command then
-    open_and_or_send(whole_command)
-  end
+function M.run_command(line)
+  whole_command = line .. "\r"
+  open_and_or_send(whole_command)
 end
 
 function M.prompt_run_command()
   fn.inputsave()
   local command = fn.input("Command: ")
   fn.inputrestore()
-  whole_command = command .. "\r"
-  open_and_or_send(whole_command)
+  M.run_command(command)
+end
+
+function M.re_run()
+  if whole_command then
+    open_and_or_send(whole_command)
+  end
 end
 
 function M.kill_runner()

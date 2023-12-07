@@ -21,25 +21,15 @@ local uuid = get_uuid()
 -- default configulation values
 local default_config = {
   runner_name = "kitty-runner-" .. uuid,
-  run_cmd = { "send-text", "--" },
-  kill_cmd = { "close-window" },
-  use_keymaps = true,
-  kitty_port = "unix:/tmp/kitty-" .. uuid,
-  mode = "os-window"
-}
-
-local window_config = {
-  runner_name = "kitty-runner-" .. uuid,
   run_cmd = { "send-text", "--match=title:" .. "kitty-runner-" .. uuid },
   kill_cmd = { "close-window", "--match=title:" .. "kitty-runner-" .. uuid },
   use_keymaps = true,
   kitty_port = "unix:/tmp/kitty",
-  mode = "window"
+  type = "window"
 }
 
 M = vim.deepcopy(default_config)
 M.default_config = default_config
-M.window_config = window_config
 
 -- configuration update function
 M.update = function(opts)
@@ -52,8 +42,8 @@ end
 -- define default commands
 M.define_commands = function()
   cmd([[
-    command! KittyReRunCommand lua require('kitty-runner').re_run_command()
-    command! -range KittySendLines lua require('kitty-runner').run_command(vim.region(0, vim.fn.getpos("'<"), vim.fn.getpos("'>"), "l", false)[0])
+    command! KittyReRunCommand lua require('kitty-runner').re_run()
+    command! -range KittySendLines lua require('kitty-runner').run_region(vim.region(0, vim.fn.getpos("'<"), vim.fn.getpos("'>"), "l", false)[0])
     command! KittyRunCommand lua require('kitty-runner').prompt_run_command()
     command! KittyClearRunner lua require('kitty-runner').clear_runner()
     command! KittyOpenRunner lua require('kitty-runner').open_runner()
