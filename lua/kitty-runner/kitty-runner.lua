@@ -131,7 +131,7 @@ end
 
 function M.clear_runner()
   if runner_is_open == true then
-    send_kitty_command(config["run_cmd"], "")
+    send_kitty_command(config["run_cmd"], "\f")
   end
 end
 
