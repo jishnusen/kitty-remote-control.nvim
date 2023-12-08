@@ -1,10 +1,13 @@
 # kitty-runner.nvim
 
-This neovim plugin allows you to easily send lines from the current buffer to another kitty terminal. I use it mostly as a poor man's REPL, e.g. I start ipython in the kitty terminal and send buffer lines to it.
+My fork. Uses `kitty @ launch` for everything, and codes windows by kitty ID instead of generated UUID
 
-This plugin is inspired by and heavily borrows from [vim-kitty-runner](https://github.com/LkeMitchll/vim-kitty-runner).
-
-If you run into trouble using the plugin or have suggestions for improvements, do open an issue! :)
+Requires:
+```
+allow_remote_control socket-only
+listen_on unix:/path/to/socket
+```
+in `kitty.conf`
 
 # Functionality
 
@@ -26,13 +29,24 @@ By default a number of keymaps are created (see below to turn this off):
 
 ## Installation
 
-With packer:
+Recommended setup (with Lazy):
 
 ```lua
-use {
-  "jghauser/kitty-runner.nvim",
+return {
+  'jishnusen/kitty-runner.nvim',
   config = function()
-    require("kitty-runner").setup()
+    require("kitty-runner").setup({
+      type = "window"
+    })
+    vim.keymap.set("n", "<leader>ti",
+      function()
+        require("kitty-runner.kitty-runner").run_command("ipython")
+      end
+    )
+    vim.api.nvim_create_autocmd({ "ExitPre" }, {
+      pattern = { "*" },
+      command = [[KittyKillRunner]],
+    })
   end
 }
 ```
@@ -40,39 +54,6 @@ use {
 ## Configuration
 
 The setup function allows adjusting various settings. By default it sets the following:
-
-```lua
-require("kitty-runner").setup({
-  -- name of the kitty terminal:
-  runner_name = "kitty-runner-" .. uuid,
-  -- kitty arguments when sending lines/command:
-  run_cmd = {"send-text", "--"},
-  -- kitty arguments when killing a runner:
-  kill_cmd = {"close-window"},
-  -- use default keymaps:
-  use_keymaps = true,
-  -- the port used to communicate with the kitty terminal:
-  kitty_port = "unix:/tmp/kitty-" .. uuid,
-  -- the type of window that kitty will create:
-  -- - os-window = a new window
-  -- - window = a new split within the current window (see below)
-  -- - More info: https://sw.kovidgoyal.net/kitty/glossary/#term-os_window
-  mode = "os-window"
-})
-```
-
-### Window Mode
-
-By default `kitty-runner` will open OS level windows, if you would like to open "kitty windows" or splits inside your current window you can configure like so:
-
-
-```lua
-local opts = require("kitty-runner.config").window_config
-require("kitty-runner").setup(opts)
-```
-
-...which will setup the following:
-
 ```lua
 {
   runner_name = "kitty-runner",
@@ -82,6 +63,7 @@ require("kitty-runner").setup(opts)
   use_keymaps = true,
   -- can specify your own socket here, we read from env by default
   kitty_port = os.getenv("KITTY_LISTEN_ON"),
+  -- any window type supported by kitty, includes tab, os-window, etc.
   mode = "window"
 }
 ```
