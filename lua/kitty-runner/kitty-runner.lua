@@ -4,7 +4,6 @@
 
 local config = require("kitty-runner.config")
 local fn = vim.fn
-local loop = vim.loop
 
 local M = {}
 
@@ -14,7 +13,7 @@ local runner_is_open = false
 
 local function send_kitty_command(cmd_args, command)
   local match = { "--to=" .. config["kitty_port"], "--match=id:" .. runner_id }
-  local kitten = { "@" }
+  local kitten = { "kitty", "@" }
   for _, v in pairs(cmd_args) do
     table.insert(kitten, v)
   end
@@ -22,9 +21,7 @@ local function send_kitty_command(cmd_args, command)
     table.insert(kitten, v)
   end
   table.insert(kitten, command)
-  loop.spawn("kitty", {
-    args = kitten,
-  })
+  return vim.fn.jobstart(kitten)
 end
 
 local function open_and_or_send(command)
@@ -55,56 +52,37 @@ end
 
 function M.open_runner(callback)
   if runner_is_open == false then
-    local stdout = loop.new_pipe()
-    local stderr = loop.new_pipe()
-    local cmd_out
-    local cmd_err
-    local handle
-    handle = loop.spawn(
-      "kitty",
+    vim.fn.jobstart(
       {
-        args = {
-          "@",
-          "launch",
-          "--title=" .. config["runner_name"],
-          "--keep-focus",
-          "--cwd=" .. vim.fn.getcwd(),
-          "--type=" .. config["type"],
+        "kitty",
+        "@",
+        "launch",
+        "--title=" .. config["runner_name"],
+        "--keep-focus",
+        "--cwd=" .. vim.fn.getcwd(),
+        "--type=" .. config["type"],
         },
-        stdio = { nil, stdout, stderr },
-      },
-      function(code, _)
-        -- if we got this far, all the handles are non-nil
-        stdout:read_stop()
-        stderr:read_stop()
-        stdout:close()
-        stderr:close()
-        handle:close()
-        if code > 0 then
-          runner_is_open = false
-          print(cmd_err)
-          error("failed to launch kitty window")
-        else
-          runner_is_open = true
-          local newline = string.find(cmd_out, '\n')-1
-          runner_id = tonumber(string.sub(cmd_out, 1, newline))
-          if callback then callback() end
-        end
-      end
-    )
-    loop.read_start(stdout, function(err, data)
-      assert(not err, err)
-      if data then
-        cmd_out = data
-      end
-    end)
-
-    loop.read_start(stderr, function(err, data)
-      assert(not err, err)
-      if data then
-        cmd_err = vim.inspect(data)
-      end
-    end)
+      {
+        on_exit = function(_, c, _)
+          if c > 0 then
+            runner_is_open = false
+            print(err)
+          else
+            runner_is_open = true
+            if callback then
+              callback()
+            end
+          end
+        end,
+        on_stdout = function (_, d)
+          runner_id = tonumber(d[1])
+        end,
+        stdout_buffered = true,
+        on_stderr = function (_, d)
+          err = table.concat(d)
+        end,
+        stderr_buffered = true
+      })
   end
 end
 
@@ -136,6 +114,17 @@ end
 function M.kill_runner()
   if runner_is_open == true then
     send_kitty_command(config["kill_cmd"], nil)
+    runner_is_open = false
+  end
+end
+
+function M.kill_runner_sync()
+  if runner_is_open == true then
+    local id = send_kitty_command(config["kill_cmd"], nil)
+    local wt = vim.fn.jobwait({ id }, 1000)
+    if wt < 0 then
+      error("failed to sync kill kitty!")
+    end
     runner_is_open = false
   end
 end

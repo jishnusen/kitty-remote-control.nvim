@@ -36,6 +36,7 @@ M.define_commands = function()
     command! KittyClearRunner lua require('kitty-runner').clear_runner()
     command! KittyOpenRunner lua require('kitty-runner').open_runner()
     command! KittyKillRunner lua require('kitty-runner').kill_runner()
+    command! KittyKillRunnerSync lua require('kitty-runner').kill_runner_sync()
   ]])
 end
 
