@@ -9,16 +9,21 @@ local loop = vim.loop
 local M = {}
 
 local whole_command
+local runner_id
 local runner_is_open = false
 
 local function send_kitty_command(cmd_args, command)
-  local args = { "@", "--to=" .. config["kitty_port"] }
+  local match = { "--to=" .. config["kitty_port"], "--match=id:" .. runner_id }
+  local kitten = { "@" }
   for _, v in pairs(cmd_args) do
-    table.insert(args, v)
+    table.insert(kitten, v)
   end
-  table.insert(args, command)
+  for _, v in pairs(match) do
+    table.insert(kitten, v)
+  end
+  table.insert(kitten, command)
   loop.spawn("kitty", {
-    args = args,
+    args = kitten,
   })
 end
 
@@ -50,7 +55,12 @@ end
 
 function M.open_runner(callback)
   if runner_is_open == false then
-    local on_exit = loop.spawn(
+    local stdout = loop.new_pipe()
+    local stderr = loop.new_pipe()
+    local cmd_out
+    local cmd_err
+    local handle
+    handle = loop.spawn(
       "kitty",
       {
         args = {
@@ -61,19 +71,40 @@ function M.open_runner(callback)
           "--cwd=" .. vim.fn.getcwd(),
           "--type=" .. config["type"],
         },
+        stdio = { nil, stdout, stderr },
       },
       function(code, _)
+        -- if we got this far, all the handles are non-nil
+        stdout:read_stop()
+        stderr:read_stop()
+        stdout:close()
+        stderr:close()
+        handle:close()
         if code > 0 then
           runner_is_open = false
-          error("Failed: check if allow_remote_control is enabled")
+          print(cmd_err)
+          error("failed to launch kitty window")
         else
           runner_is_open = true
+          local newline = string.find(cmd_out, '\n')-1
+          runner_id = tonumber(string.sub(cmd_out, 1, newline))
           if callback then callback() end
         end
       end
     )
+    loop.read_start(stdout, function(err, data)
+      assert(not err, err)
+      if data then
+        cmd_out = data
+      end
+    end)
 
-    vim.fn.printf(vim.inspect(on_exit))
+    loop.read_start(stderr, function(err, data)
+      assert(not err, err)
+      if data then
+        cmd_err = vim.inspect(data)
+      end
+    end)
   end
 end
 

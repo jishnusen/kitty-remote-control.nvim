@@ -75,11 +75,13 @@ require("kitty-runner").setup(opts)
 
 ```lua
 {
-  runner_name = "kitty-runner-" .. uuid,
-  run_cmd = { "send-text", "--match=title:" .. "kitty-runner-" .. uuid },
-  kill_cmd = { "close-window", "--match=title:" .. "kitty-runner-" .. uuid },
+  runner_name = "kitty-runner",
+  -- can pass flags as additional items in the list
+  run_cmd = { "send-text" },
+  kill_cmd = { "close-window" },
   use_keymaps = true,
-  kitty_port = "unix:/tmp/kitty",
+  -- can specify your own socket here, we read from env by default
+  kitty_port = os.getenv("KITTY_LISTEN_ON"),
   mode = "window"
 }
 ```

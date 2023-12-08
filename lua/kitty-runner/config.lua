@@ -6,25 +6,13 @@ local cmd = vim.cmd
 local nvim_set_keymap = vim.api.nvim_set_keymap
 local M = {}
 
--- get uuid
-local function get_uuid()
-  local uuid_handle = io.popen([[uuidgen]])
-  local uuid = uuid_handle:read("*l")
-  uuid_handle:close()
-  return uuid
-end
-
-M.uuid = get_uuid
-
-local uuid = get_uuid()
-
 -- default configulation values
 local default_config = {
-  runner_name = "kitty-runner-" .. uuid,
-  run_cmd = { "send-text", "--match=title:" .. "kitty-runner-" .. uuid },
-  kill_cmd = { "close-window", "--match=title:" .. "kitty-runner-" .. uuid },
+  runner_name = "kitty-runner",
+  run_cmd = { "send-text" },
+  kill_cmd = { "close-window" },
   use_keymaps = true,
-  kitty_port = "unix:/tmp/kitty",
+  kitty_port = os.getenv("KITTY_LISTEN_ON"),
   type = "window"
 }
 
