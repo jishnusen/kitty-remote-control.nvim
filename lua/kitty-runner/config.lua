@@ -29,15 +29,13 @@ end
 
 -- define default commands
 M.define_commands = function()
-  cmd([[
-    command! KittyReRunCommand lua require('kitty-runner').re_run()
-    command! -range KittySendLines lua require('kitty-runner').run_region(vim.region(0, vim.fn.getpos("'<"), vim.fn.getpos("'>"), "l", false)[0])
-    command! KittyRunCommand lua require('kitty-runner').prompt_run_command()
-    command! KittyClearRunner lua require('kitty-runner').clear_runner()
-    command! KittyOpenRunner lua require('kitty-runner').open_runner()
-    command! KittyKillRunner lua require('kitty-runner').kill_runner()
-    command! KittyKillRunnerSync lua require('kitty-runner').kill_runner_sync()
-  ]])
+  local runner = require('kitty-runner.kitty-runner')
+  vim.api.nvim_create_user_command('KittySendLines', function (d) runner.run_region(d.line1, d.line2) end, { range = true })
+  vim.api.nvim_create_user_command('KittyRunCommand', runner.prompt_run_command, {})
+  vim.api.nvim_create_user_command('KittyClearRunner', runner.clear_runner, {})
+  vim.api.nvim_create_user_command('KittyOpenRunner', function() runner.open_runner() end, {})
+  vim.api.nvim_create_user_command('KittyKillRunner', runner.kill_runner, {})
+  vim.api.nvim_create_user_command('KittyKillRunnerSync', runner.kill_runner_sync, {})
 end
 
 -- define default keymaps

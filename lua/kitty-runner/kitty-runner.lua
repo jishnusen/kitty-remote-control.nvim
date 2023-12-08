@@ -34,24 +34,21 @@ local function open_and_or_send(command)
   end
 end
 
-local function prepare_command(region)
-  local lines
-  if region[1] == 0 then
-    lines = vim.api.nvim_buf_get_lines(
-      0,
-      vim.api.nvim_win_get_cursor(0)[1] - 1,
-      vim.api.nvim_win_get_cursor(0)[1],
-      true
-    )
-  else
-    lines = vim.api.nvim_buf_get_lines(0, region[1] - 1, region[2], true)
-  end
+local function prepare_command(s, e)
+  local lines = vim.api.nvim_buf_get_lines(
+    0,
+    s - 1,
+    e,
+    true
+  )
   local command = table.concat(lines, "\r")
   return "\\e[200~" .. command .. "\\e[201~" .. "\r"
 end
 
 function M.open_runner(callback)
+  callback = callback or function () end
   if runner_is_open == false then
+    local err
     vim.fn.jobstart(
       {
         "kitty",
@@ -69,9 +66,7 @@ function M.open_runner(callback)
             print(err)
           else
             runner_is_open = true
-            if callback then
-              callback()
-            end
+            callback()
           end
         end,
         on_stdout = function (_, d)
@@ -86,8 +81,8 @@ function M.open_runner(callback)
   end
 end
 
-function M.run_region(region)
-  whole_command = prepare_command(region)
+function M.run_region(s, e)
+  whole_command = prepare_command(s, e)
   -- delete visual selection marks
   vim.cmd([[delm <>]])
   open_and_or_send(whole_command)
